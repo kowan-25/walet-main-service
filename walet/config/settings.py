@@ -170,3 +170,5 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60)
 }
+
+AUTH_USER_MODEL = 'authentication.WaletUser'

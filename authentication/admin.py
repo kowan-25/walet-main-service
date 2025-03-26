@@ -1,3 +1,4 @@
 from django.contrib import admin
+from .models import WaletUser
 
-# Register your models here.
+admin.site.register(WaletUser)
