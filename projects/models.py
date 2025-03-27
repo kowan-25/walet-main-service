@@ -29,3 +29,19 @@ class ProjectCategory(models.Model):
 
     def __str__(self):
         return self.name + " " + self.project.name
+    
+class ProjectMember(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member = models.ForeignKey(WaletUser, on_delete=models.CASCADE, db_column='member_id')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, db_column='project_id')
+    budget = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['project_id', 'member_id'], name='unique_member_project')
+        ]
+    
+    def __str__(self):
+        return f"{self.member.username} in Project {self.project.name}"
+
