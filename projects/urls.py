@@ -11,4 +11,5 @@ urlpatterns = [
     path('category/<uuid:pk>', GetProjectCategoryById.as_view(), name='project-category-detail'),
     path('category/create', CreateProjectCategory.as_view(), name='create-project-category'),
     path('category/delete/<uuid:pk>', DeleteProjectCategory.as_view(), name='delete-project-category'),
+    path('<uuid:project_pk>/members/<uuid:member_pk>', RemoveTeamMember.as_view(), name='remove-team-member'),
 ]

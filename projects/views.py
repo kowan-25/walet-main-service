@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -6,8 +7,12 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from .models import Project, ProjectCategory
+from authentication.models import WaletUser
+
+from .models import Project, ProjectCategory, ProjectMember
 from .serializers import ProjectCategorySerializer, ProjectSerializer
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 class GetAllManagedProject(APIView):
@@ -133,3 +138,33 @@ class DeleteProjectCategory(APIView):
             
             ProjectCategory.delete()
             return Response({"message": "category deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        
+class RemoveTeamMember(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, project_pk, member_pk):
+        with transaction.atomic():
+            logger.info(
+                f"Delete member: project={project_pk}, member={member_pk}, by user={request.user.id}"
+            )
+            project = get_object_or_404(Project, pk=project_pk)
+            member = get_object_or_404(WaletUser, pk=member_pk)
+
+            project_member = get_object_or_404(ProjectMember, project_id=project.id, member_id=member.id)
+            if project.manager.id != request.user.id:
+                logger.warning(
+                    f"Unauthorized attempt to remove member: user={request.user.id}, project={project_pk}, member={member_pk}"
+                )
+                raise PermissionDenied("You don't have permissions to remove team members from this project")
+
+            
+            project.total_budget = (project.total_budget or 0) + project_member.budget
+            project.save()
+
+            project_member.delete()
+            logger.info(
+                f"Member removed successfully: project={project_pk}, member={member_pk}, by user={request.user.id}"
+            )
+            return Response({"message": "Member succesfully removed from project"}, status=status.HTTP_204_NO_CONTENT)
+            
