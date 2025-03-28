@@ -1,8 +1,13 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.utils import timezone
+from datetime import timedelta
+import uuid
+
 from authentication.models import WaletUser
 
-import uuid
+
+
 
 # Create your models here.
 class Project(models.Model):
@@ -44,4 +49,17 @@ class ProjectMember(models.Model):
     
     def __str__(self):
         return f"{self.member.username} in Project {self.project.name}"
+
+def get_expiry():
+    return timezone.now() + timedelta(days=3)
+class ProjectInvitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, db_column='project_id')
+    user = models.ForeignKey(WaletUser, on_delete=models.CASCADE, db_column='user_id')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=get_expiry)
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Invitation for {self.user.username} to join {self.project.name}"
 
