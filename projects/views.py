@@ -24,6 +24,30 @@ class GetAllManagedProject(APIView):
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class GetAllJoinedProject(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        projects_joined = ProjectMember.objects.filter(member=request.user.id)
+        projects = [member.project for member in projects_joined]
+        serializer = ProjectSerializer(projects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GetProjectById(APIView):
+   
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        project = get_object_or_404(Project, pk=pk)
+
+        is_team_member = ProjectMember.objects.filter(project=project.id, member=request.user.id).exists()
+        if project.manager.id == request.user.id or is_team_member:
+            serializer = ProjectSerializer(project)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        raise PermissionDenied("You don't have permissions to view this project")
+
 class CreateProject(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
