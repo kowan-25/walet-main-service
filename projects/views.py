@@ -1,5 +1,8 @@
 import logging
+import os
+import requests
 from uuid import UUID
+from django.utils import timezone
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,8 +12,8 @@ from django.db import transaction
 
 from authentication.models import WaletUser
 
-from .models import Project, ProjectCategory, ProjectMember
-from .serializers import ProjectCategorySerializer, ProjectSerializer
+from .models import Project, ProjectCategory, ProjectInvitation, ProjectMember
+from .serializers import ProjectCategorySerializer, ProjectInvitationSerializer, ProjectMemberSerializer, ProjectSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -191,4 +194,87 @@ class RemoveTeamMember(APIView):
                 f"Member removed successfully: project={project_pk}, member={member_pk}, by user={request.user.id}"
             )
             return Response({"message": "Member succesfully removed from project"}, status=status.HTTP_204_NO_CONTENT)
+
+class InviteTeamMember(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ''' Expecting { project_id, email } inside request_body'''
+        email = request.data.get("email")
+        project_id = UUID(request.data.get("project_id"))
+        
+        if not email or not project_id:
+            return Response({"error": "Email and project_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(WaletUser, email=email)
+        project = get_object_or_404(Project, id=project_id)
+
+        if project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to invite member to this project")
+        
+        if ProjectMember.objects.filter(member=user, project=project).exists():
+            return Response({"error": "User Already in Project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            # req body
+            data = {
+                "project": project.id,
+                "user": user.id
+            }
+
+            serializer = ProjectInvitationSerializer(data=data)
+            if serializer.is_valid():
+                invitation = serializer.save()
+                invite_token = str(invitation.id)
+                invite_url = f'http://localhost:8000/api/project/add-member/{invite_token}'  #TODO: change to FE deployment url that include login
+                email_payload = {
+                    "to": email,
+                    "context": {
+                        "name": user.username,
+                        "project_name": project.name,
+                        "invite_link": invite_url
+                    }
+                }
+
+                try:
+                    response = requests.post(f"{os.getenv('NOTIFICATION_URL', 'http://localhost:8001')}/email/invite", json=email_payload)
+                    response.raise_for_status()
+                except requests.RequestException:
+                    return Response({"error": "Failed to send email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                return Response({"message": "Invitation sent", "token": invite_token}, status=status.HTTP_200_OK)
+
+class AddTeamMember(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, token):
+        invitation = get_object_or_404(ProjectInvitation, pk=token)
+
+        if invitation.user.id != request.user.id:
+            return Response({"error": "this invitation is not for you"}, status=status.HTTP_403_FORBIDDEN)
+        if invitation.expires_at < timezone.now():
+            return Response({"error": "Invitation Expired"}, status=status.HTTP_400_BAD_REQUEST)
+        if invitation.is_used:
+            return Response({"error": "Invitation Already Used"}, status=status.HTTP_400_BAD_REQUEST)
+        if ProjectMember.objects.filter(member=invitation.user, project=invitation.project).exists():
+            return Response({"error": "User Already in Project"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+            # req body
+            data = {
+              "member": invitation.user.id,
+              "project": invitation.project.id
+            }
+
+            serializer = ProjectMemberSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+        
+                invitation.is_used = True
+                invitation.save(update_fields=["is_used"]) 
+
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             

@@ -14,4 +14,6 @@ urlpatterns = [
     path('category/create', CreateProjectCategory.as_view(), name='create-project-category'),
     path('category/delete/<uuid:pk>', DeleteProjectCategory.as_view(), name='delete-project-category'),
     path('<uuid:project_pk>/members/<uuid:member_pk>', RemoveTeamMember.as_view(), name='remove-team-member'),
+    path('invite-member', InviteTeamMember.as_view(), name='invite-team-member'),
+    path('add-member/<uuid:token>', AddTeamMember.as_view(), name='add-team-member'),
 ]
