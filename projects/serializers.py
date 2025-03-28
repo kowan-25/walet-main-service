@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectCategory, ProjectInvitation, ProjectMember
+from .models import Project, ProjectBudgetRecord, ProjectCategory, ProjectInvitation, ProjectMember
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,3 +24,9 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
         model = ProjectInvitation
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'expires_at', 'is_used')
+
+class ProjectBudgetRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectBudgetRecord
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at')
