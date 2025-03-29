@@ -16,4 +16,9 @@ urlpatterns = [
     path('<uuid:project_pk>/members/<uuid:member_pk>', RemoveTeamMember.as_view(), name='remove-team-member'),
     path('invite-member', InviteTeamMember.as_view(), name='invite-team-member'),
     path('add-member/<uuid:token>', AddTeamMember.as_view(), name='add-team-member'),
+    path('budget-records/<uuid:project_id>', GetProjectBudgets.as_view(), name='project-budgets'),
+    path('budget-record/<uuid:pk>', GetProjectBudgetById.as_view(), name='project-budget-detail'),
+    path('budget-record/create', AddProjectBudget.as_view(), name='create-project-budget'),
+    path('budget-record/edit/<uuid:pk>', UpdateProjectBudget.as_view(), name='edit-project-budget'),
+    path('budget-record/delete/<uuid:pk>', DeleteProjectBudget.as_view(), name='delete-project-budget'),
 ]

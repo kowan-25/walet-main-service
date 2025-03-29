@@ -12,8 +12,9 @@ from django.db import transaction
 
 from authentication.models import WaletUser
 
-from .models import Project, ProjectCategory, ProjectInvitation, ProjectMember
-from .serializers import ProjectCategorySerializer, ProjectInvitationSerializer, ProjectMemberSerializer, ProjectSerializer
+from .services import create_budget_records
+from .models import Project, ProjectBudgetRecord, ProjectCategory, ProjectInvitation, ProjectMember
+from .serializers import ProjectBudgetRecordSerializer, ProjectCategorySerializer, ProjectInvitationSerializer, ProjectMemberSerializer, ProjectSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -277,4 +278,82 @@ class AddTeamMember(APIView):
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
+
+class GetProjectBudgets(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+
+        if project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to see budget record from this project")
+        
+        budget_records = ProjectBudgetRecord.objects.filter(project=project_id)
+        serializer = ProjectBudgetRecordSerializer(budget_records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GetProjectBudgetById(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        budget_records = get_object_or_404(ProjectBudgetRecord, pk=pk)
+
+        if budget_records.project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to see this budget record")
+        
+        serializer = ProjectBudgetRecordSerializer(budget_records)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AddProjectBudget(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ''' Expecting { project_id, amount, notes } inside request_body'''
+        project_id = UUID(request.data["project_id"])
+        amount = request.data.get("amount")
+        notes = request.data.get("notes", "-") #optional
+
+        data, status = create_budget_records(project_id, amount, notes, request.user.id, is_editable=True)
+        return Response(data, status=status)
+
+class UpdateProjectBudget(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        ''' Expecting { amount, notes } inside request_body'''
+        budget_records = get_object_or_404(ProjectBudgetRecord, pk=pk)
+        amount = request.data.get("amount", budget_records.amount)
+        notes = request.data.get("notes", budget_records.notes)
+        
+        if budget_records.project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to update this budget record")
+        
+        if budget_records.is_editable:
+            with transaction.atomic():
+                budget_records.amount = amount
+                budget_records.notes = notes
+                budget_records.save()
+                return Response({"detail": f"succesfully updated budget record {budget_records.id}"}, status=status.HTTP_200_OK)
+        
+        return Response({"error": "this budget record is uneditable"}, status=status.HTTP_403_FORBIDDEN)
+
+class DeleteProjectBudget(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        budget_records = get_object_or_404(ProjectBudgetRecord, pk=pk)
+        
+        if budget_records.project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to delete this budget record")
+        
+        if budget_records.is_editable:
+            with transaction.atomic():
+                budget_records.delete()
+                return Response({"detail": f"succesfully deleted budget record {budget_records.id}"}, status=status.HTTP_200_OK)
+        
+        return Response({"error": "this budget record is uneditable"}, status=status.HTTP_403_FORBIDDEN)
