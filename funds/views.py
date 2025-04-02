@@ -1,4 +1,7 @@
+import os
 from uuid import UUID
+
+import requests
 from funds.services import send_funds
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -169,4 +172,63 @@ class GetBudgetRequestById(APIView):
 
         serializer = BudgetRequestSerializer(budget_request)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class CreateBudgetRequest(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ''' Expecting { project_id, amount, request_reason } key inside request_body'''
+        with transaction.atomic():
+            project_id = UUID(request.data.get("project_id"))
+            request_reason = request.data.get("request_reason")
+            amount = request.data.get("amount")
+
+            if not project_id or not request_reason:
+                return Response(
+                    {"error": "project_id and request_reason are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            project = get_object_or_404(Project, pk=project_id)
+            member = get_object_or_404(ProjectMember, project=project_id, member=request.user.id)
+
+            if project.total_budget < int(amount):
+                return Response( 
+                    {"error": "the amount of your request is higher than project total budget"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            data = {
+                "project": project_id,
+                "request_reason": request_reason,
+                "amount": amount
+            }
+
+            serializer = BudgetRequestSerializer(data=data)
+            if serializer.is_valid():
+                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
+                notification_data = {
+                    "to": project.manager.email,
+                    "context": {
+                        "recipient_name": project.manager.username,
+                        "sender_name": member.member.username,
+                        "action_link": "https://medium.com/@naufalichsan114/",
+                        "project_name": project.name,
+                        "fund_total": amount
+                    }
+                }
+
+                response = requests.post(notification_url, json=notification_data)
+                if response.status_code != 200:
+                    return Response(
+                        {"error": "Failed to send notification", "details": response.json()},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                serializer.save(requested_by=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
     
