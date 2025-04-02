@@ -7,8 +7,8 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from .models import Transaction
-from .serializers import TransactionSerializer
+from .models import BudgetRequest, Transaction
+from .serializers import BudgetRequestSerializer, TransactionSerializer
 from projects.models import Project, ProjectMember
 
 class GetProjectTransaction(APIView):
@@ -142,3 +142,31 @@ class SendFunds(APIView):
         notes = request.data.get("notes", "-")
         data, status = send_funds(project_id, member_id, funds, notes, request.user.id)
         return Response(data, status=status)
+
+class GetUserBudgetRequests(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        budget_requests = BudgetRequest.objects.filter(requested_by=request.user.id)
+        
+        status_filter = request.query_params.get('status')
+        if status_filter in ['pending', 'approved', 'rejected']:
+            budget_requests = budget_requests.filter(status=status_filter)
+        
+        serializer = BudgetRequestSerializer(budget_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GetBudgetRequestById(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        budget_request = get_object_or_404(BudgetRequest, id=pk)
+        
+        if budget_request.requested_by != request.user:
+            raise PermissionDenied("You don't have permissions to view this budget request")
+
+        serializer = BudgetRequestSerializer(budget_request)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
