@@ -1,4 +1,5 @@
 from uuid import UUID
+from funds.services import send_funds
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -128,3 +129,16 @@ class DeleteTransaction(APIView):
 
             tx.delete()
             return Response({"message": "Transaction deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        
+
+class SendFunds(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, project_id):
+        ''' Expecting { member_id, funds, notes } key inside request_body'''
+        member_id = UUID(request.data.get("member_id"))
+        funds = request.data.get("funds")
+        notes = request.data.get("notes", "-")
+        data, status = send_funds(project_id, member_id, funds, notes, request.user.id)
+        return Response(data, status=status)
