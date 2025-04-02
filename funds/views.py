@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.utils import timezone
 
 from .models import BudgetRequest, Transaction
 from .serializers import BudgetRequestSerializer, TransactionSerializer
@@ -231,4 +232,80 @@ class CreateBudgetRequest(APIView):
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
+class ResolveBudgetRequest(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        ''' Expecting { resolve_note, action } key inside request_body'''
+        try:
+            with transaction.atomic():  
+                budget_request = get_object_or_404(BudgetRequest, pk=pk)
+                project = budget_request.project
+                if project.manager.id != request.user.id:
+                    raise PermissionDenied("You don't have permissions to resolve this budget request")
+
+
+                if budget_request.status != 'pending':
+                    return Response({"error": "This request has already been resolved"}, status=status.HTTP_400_BAD_REQUEST)
+
+                action = request.data.get("action") 
+                resolve_note = request.data.get("resolve_note", "")
+
+                if action not in ['approve', 'reject']:
+                    return Response({"error": "Action must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
+
+                budget_request.status = 'approved' if action == 'approve' else 'rejected'
+                budget_request.resolve_note = resolve_note
+                budget_request.resolved_at = timezone.now()
+                budget_request.resolved_by = request.user
+
+                if budget_request.status == 'approved':
+                    if budget_request.amount <= 0:
+                        return Response(
+                            {"error": "Amount must be positive"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    if project.total_budget < budget_request.amount:
+                        return Response(
+                            {"error": "Insufficient project budget to approve this request"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    data, status_code = send_funds(project.id, budget_request.requested_by.id, int(budget_request.amount), "approved budget request", request.user.id)
+
+                    if status_code != status.HTTP_200_OK:
+                        return Response(data, status=status_code)
+
+                budget_request.save()
+
+                # Email Notification
+                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-approval"
+                email_payload = {
+                    "to": budget_request.requested_by.email,
+                    "context": {
+                        "recipient_name": budget_request.requested_by.username,
+                        "project_name": project.name,
+                        "status": budget_request.status
+                    }
+                }
+
+                response = requests.post(notification_url, json=email_payload)
+                if response.status_code != 200:
+                    return Response(
+                        {"error": "Failed to send notification", "details": response.json()},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+                return Response(
+                    {"message": f"Budget request {budget_request.status}"},
+                    status=status.HTTP_200_OK
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Unexpected error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
