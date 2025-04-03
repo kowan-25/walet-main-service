@@ -17,7 +17,6 @@ class RegisterUser(APIView):
         ''' Expected { username, password, email } key in req body'''
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
             notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
             email_payload = {
                 "to": user.email,
@@ -33,7 +32,8 @@ class RegisterUser(APIView):
                     {"error": "Failed to send notification", "details": response.json()},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-
+            
+            user = serializer.save()
             return Response({
                 'message': 'User registered successfully',
                 'user': {
