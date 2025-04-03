@@ -2,7 +2,6 @@ import os
 from uuid import UUID
 
 import requests
-from funds.services import send_funds
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,6 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import BudgetRequest, Transaction
+from .services import send_funds, take_funds
 from .serializers import BudgetRequestSerializer, TransactionSerializer
 from projects.models import Project, ProjectMember
 
@@ -147,6 +147,18 @@ class SendFunds(APIView):
         data, status = send_funds(project_id, member_id, funds, notes, request.user.id)
         return Response(data, status=status)
 
+class TakeFunds(APIView):
+
+     permission_classes = [permissions.IsAuthenticated]
+
+     def post(self, request, project_id):
+          ''' Expecting { member_id, funds, notes } key inside request_body'''
+          member_id = UUID(request.data.get("member_id"))
+          funds = request.data.get("funds")
+          notes = request.data.get("notes", "-")
+          data, status = take_funds(project_id, member_id, funds, notes, request.user.id)
+          return Response(data, status=status)
+     
 class GetUserBudgetRequests(APIView):
     
     permission_classes = [permissions.IsAuthenticated]

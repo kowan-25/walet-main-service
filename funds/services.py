@@ -38,3 +38,35 @@ def send_funds(project_id, member_id, funds, notes, manager_id):
 
     except (KeyError, ValueError):
         return {"error": "Invalid input data"}, status.HTTP_400_BAD_REQUEST
+
+def take_funds(project_id, member_id, funds, notes, manager_id):
+    try:
+        funds = int(funds)
+        if funds <= 0:
+            return {"error": "Funds must be positive"}, status.HTTP_400_BAD_REQUEST
+
+        project = get_object_or_404(Project, pk=project_id)
+        member = get_object_or_404(ProjectMember, member=member_id, project=project_id)
+
+        if project.manager.id != manager_id:
+            raise PermissionDenied("You don't have permissions to take funds in this project")
+
+        if member.budget < funds:
+            return {"error": "Member budget is not sufficient"}, status.HTTP_400_BAD_REQUEST
+
+        with transaction.atomic():
+            member.budget -= funds
+            member.save()
+
+            create_budget_records(project_id, funds, notes, manager_id=manager_id, member_id=member_id)
+
+        data = {
+            "message": "Funds taken successfully",
+            "project_remaining_budget": project.total_budget,
+            "member_new_budget": member.budget
+        }
+
+        return data, status.HTTP_200_OK
+
+    except (KeyError, ValueError):
+        return {"error": "Invalid input data"}, status.HTTP_400_BAD_REQUEST
