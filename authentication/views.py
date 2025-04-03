@@ -15,34 +15,35 @@ from .serializers import RegisterUserSerializer, CustomTokenObtainPairSerializer
 class RegisterUser(APIView):
     def post(self, request):
         ''' Expected { username, password, email } key in req body'''
-        serializer = RegisterUserSerializer(data=request.data)
-        if serializer.is_valid():
-            notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
-            email_payload = {
-                "to": user.email,
-                "context": {
-                    "username": user.username,
-                    "verification_link": f"http://localhost:8000/api/auth/verify/{user.username}" #TODO: change to fe link for verifying user
+        with transaction.atomic():
+            serializer = RegisterUserSerializer(data=request.data)
+            if serializer.is_valid():
+                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
+                email_payload = {
+                    "to": user.email,
+                    "context": {
+                        "username": user.username,
+                        "verification_link": f"http://localhost:8000/api/auth/verify/{user.username}" #TODO: change to fe link for verifying user
+                    }
                 }
-            }
 
-            response = requests.post(notification_url, json=email_payload)
-            if response.status_code != 200:
-                return Response(
-                    {"error": "Failed to send notification", "details": response.json()},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            
-            user = serializer.save()
-            return Response({
-                'message': 'User registered successfully',
-                'user': {
-                    'id': str(user.id),
-                    'username': user.username,
-                    'email': user.email
-                }
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                response = requests.post(notification_url, json=email_payload)
+                if response.status_code != 200:
+                    return Response(
+                        {"error": "Failed to send notification", "details": response.json()},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                user = serializer.save()
+                return Response({
+                    'message': 'User registered successfully',
+                    'user': {
+                        'id': str(user.id),
+                        'username': user.username,
+                        'email': user.email
+                    }
+                }, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyUser(APIView):
     def post(self, request, username):
