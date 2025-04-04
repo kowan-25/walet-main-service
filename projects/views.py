@@ -9,8 +9,10 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Sum, Count
 
 from authentication.models import WaletUser
+from funds.models import Transaction
 
 from .services import create_budget_records
 from .models import Project, ProjectBudgetRecord, ProjectCategory, ProjectInvitation, ProjectMember
@@ -357,3 +359,101 @@ class DeleteProjectBudget(APIView):
                 return Response({"detail": f"succesfully deleted budget record {budget_records.id}"}, status=status.HTTP_200_OK)
         
         return Response({"error": "this budget record is uneditable"}, status=status.HTTP_403_FORBIDDEN)
+    
+class GetProjectAnalytics(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+
+        if project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to view this project's analytics")
+        
+        today = timezone.now()
+        
+        # Check if month is provided in query params
+        month_param = request.query_params.get('month')
+        
+        try:
+            if month_param:
+                month = int(month_param)
+                
+                # Validate month is between 1 and 12
+                if month < 1 or month > 12:
+                    return Response(
+                        {"error": "Month must be between 1 and 12"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                if month > today.month:
+                    return Response(
+                        {"error": "Month cannot be in the future"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                month_start = timezone.datetime(today.year, month, 1, 0, 0, 0, 0, tzinfo=timezone.get_current_timezone())
+            else:
+                month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        except ValueError:
+            return Response(
+                {"error": "Invalid month or year format"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month = month_start.replace(month=month_start.month + 1)
+
+        print("month_start", month_start)
+
+        total_spendings = Transaction.objects.filter(
+            project=project_id,
+            created_at__gte=month_start,
+            created_at__lt=next_month
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        top_categories = Transaction.objects.filter(
+            project=project_id,
+            created_at__gte=month_start,
+            created_at__lt=next_month,
+            transaction_category__isnull=False 
+        ).values('transaction_category__name')\
+         .annotate(total=Sum('amount'))\
+         .order_by('-total')[:3]
+        
+        top_members = Transaction.objects.filter(
+            project=project_id,
+            created_at__gte=month_start,
+            created_at__lt=next_month,
+            user__isnull=False
+        ).values('user__username', 'user__id')\
+         .annotate(
+            transaction_count=Count('id'),
+            total_amount=Sum('amount')
+         )\
+         .order_by('-total_amount')[:3]
+        
+        data= {
+            "month": month_start.month,
+            "total_spendings": total_spendings,
+            "top_categories": [
+                {
+                    "name": category['transaction_category__name'],  
+                    "total_spendings": category['total'],
+                    "percentage": (category['total'] / total_spendings) * 100 if total_spendings > 0 else 0
+                } for category in top_categories
+            ],
+            "top_members": [  
+                {
+                    "username": member['user__username'],
+                    "user_id": member['user__id'],
+                    "transaction_count": member['transaction_count'],
+                    "total_amount": member['total_amount'],
+                    "percentage": (member['total_amount'] / total_spendings) * 100 if total_spendings > 0 else 0
+                } for member in top_members
+            ]
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
