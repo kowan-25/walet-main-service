@@ -17,6 +17,12 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
     
+    def validate(self, attrs):
+        # Create a temporary instance to call clean
+        instance = WaletUser(**attrs)
+        instance.clean()
+        return attrs
+    
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
