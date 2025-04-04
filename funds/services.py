@@ -30,7 +30,7 @@ def send_funds(project_id, member_id, funds, notes, manager_id):
 
         data = {
             "message": "Funds sent successfully",
-            "project_remaining_budget": project.total_budget,
+            "project_remaining_budget": project.total_budget - funds,
             "member_new_budget": member.budget
         }
 
@@ -62,7 +62,7 @@ def take_funds(project_id, member_id, funds, notes, manager_id):
 
         data = {
             "message": "Funds taken successfully",
-            "project_remaining_budget": project.total_budget,
+            "project_remaining_budget": project.total_budget + funds,
             "member_new_budget": member.budget
         }
 
