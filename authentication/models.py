@@ -2,6 +2,7 @@ from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class WaletUserManager(BaseUserManager):
     def create_user(self, username, email, password=None):
@@ -49,3 +50,14 @@ class WaletUser(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return self.is_superuser  # Superusers can access all modules
+    
+    def clean(self):
+        super().clean()
+        # Password validation
+        if self.password:
+            if len(self.password) < 8:
+                raise ValidationError('Password must be at least 8 characters long.')
+            if not re.search(r'\d', self.password):
+                raise ValidationError('Password must contain at least one number.')
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>]', self.password):
+                raise ValidationError('Password must contain at least one special character.')
