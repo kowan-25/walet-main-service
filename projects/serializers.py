@@ -14,10 +14,14 @@ class ProjectCategorySerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 class ProjectMemberSerializer(serializers.ModelSerializer):
+    member_name = serializers.SerializerMethodField()
     class Meta:
         model = ProjectMember
         fields = '__all__'
-        read_only_fields = ('id', 'created_at')
+        read_only_fields = ('id', 'created_at', 'member_name')
+
+    def get_member_name(self, obj):
+        return obj.member.username if obj.member else ''
 
 class ProjectInvitationSerializer(serializers.ModelSerializer):
     class Meta:

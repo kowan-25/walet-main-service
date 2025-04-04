@@ -467,6 +467,7 @@ class GetProjectMembers(APIView):
         if project.manager.id != request.user.id:
             raise PermissionDenied("You don't have permissions to view members of this project")
 
-        project_members = ProjectMember.objects.filter(project=project_id)
+        project_members = ProjectMember.objects.select_related('member').filter(project=project_id)
         serializer = ProjectMemberSerializer(project_members, many=True)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
