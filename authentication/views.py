@@ -18,6 +18,7 @@ class RegisterUser(APIView):
         with transaction.atomic():
             serializer = RegisterUserSerializer(data=request.data)
             if serializer.is_valid():
+                user = WaletUser(**serializer.validated_data)
                 notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
                 email_payload = {
                     "to": user.email,
@@ -34,7 +35,7 @@ class RegisterUser(APIView):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
                 
-                user = serializer.save()
+                serializer.save()
                 return Response({
                     'message': 'User registered successfully',
                     'user': {
@@ -68,4 +69,5 @@ class LoginUser(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         else:
+            print("KONTOL")
             return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
