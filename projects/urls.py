@@ -22,4 +22,5 @@ urlpatterns = [
     path('budget-record/edit/<uuid:pk>', UpdateProjectBudget.as_view(), name='edit-project-budget'),
     path('budget-record/delete/<uuid:pk>', DeleteProjectBudget.as_view(), name='delete-project-budget'),
     path('analytics/<uuid:project_id>', GetProjectAnalytics.as_view(), name='project-analytics'),
+    path('<uuid:project_id>/members/', GetProjectMembers.as_view(), name='project-members-list'),
 ]

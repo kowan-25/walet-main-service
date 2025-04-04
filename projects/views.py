@@ -457,3 +457,16 @@ class GetProjectAnalytics(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+class GetProjectMembers(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, pk=project_id)
+
+        if project.manager.id != request.user.id:
+            raise PermissionDenied("You don't have permissions to view members of this project")
+
+        project_members = ProjectMember.objects.filter(project=project_id)
+        serializer = ProjectMemberSerializer(project_members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
