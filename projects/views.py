@@ -511,3 +511,28 @@ class GetProjectMemberDetails(APIView):
         serializer = ProjectMemberSerializer(project_members)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class GetProjectInvitations(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get(self, request):
+        user = get_object_or_404(WaletUser, pk=request.user.id)
+        current_time = timezone.now()
+        
+        invitations = ProjectInvitation.objects.filter(
+            user=user,
+            is_used=False,
+            expires_at__gt=current_time
+        ).select_related('project', 'project__manager')
+
+        data = {
+            "invitations": [],
+        }
+        
+        for invitation in invitations:
+            invitation_data = ProjectInvitationSerializer(invitation).data
+            invitation_data['project_name'] = invitation.project.name
+            invitation_data['project_manager_username'] = invitation.project.manager.username
+            
+            data["invitations"].append(invitation_data)
+        
+        return Response(data['invitations'], status=status.HTTP_200_OK)
