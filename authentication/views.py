@@ -69,5 +69,5 @@ class LoginUser(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         else:
-            print("KONTOL")
+
             return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
