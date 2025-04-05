@@ -216,6 +216,9 @@ class InviteTeamMember(APIView):
         if project.manager.id != request.user.id:
             raise PermissionDenied("You don't have permissions to invite member to this project")
         
+        if email == request.user.email:
+            return Response({"error": "You Cannot Invite Yourself"}, status=status.HTTP_400_BAD_REQUEST)
+        
         if ProjectMember.objects.filter(member=user, project=project).exists():
             return Response({"error": "User Already in Project"}, status=status.HTTP_400_BAD_REQUEST)
 
