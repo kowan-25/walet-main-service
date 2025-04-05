@@ -7,7 +7,7 @@ from rest_framework import status
 from django.db import transaction
 
 
-from .models import WaletUser
+from .models import VerifyToken, WaletUser
 from .serializers import RegisterUserSerializer, CustomTokenObtainPairSerializer
 
 
@@ -18,42 +18,49 @@ class RegisterUser(APIView):
         with transaction.atomic():
             serializer = RegisterUserSerializer(data=request.data)
             if serializer.is_valid():
-                user = WaletUser(**serializer.validated_data)
-                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
-                email_payload = {
-                    "to": user.email,
-                    "context": {
-                        "username": user.username,
-                        "verification_link": f"http://localhost:8000/api/auth/verify/{user.username}" #TODO: change to fe link for verifying user
-                    }
-                }
-
-                response = requests.post(notification_url, json=email_payload)
-                if response.status_code != 200:
-                    return Response(
-                        {"error": "Failed to send notification", "details": response.json()},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                with transaction.atomic():
+                    user = serializer.save()
+                    verifyToken = VerifyToken.objects.create(
+                        user_id=user.id
                     )
-                
-                serializer.save()
-                return Response({
-                    'message': 'User registered successfully',
-                    'user': {
-                        'id': str(user.id),
-                        'username': user.username,
-                        'email': user.email
+                    verifyToken.save()
+
+                    notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
+
+                    email_payload = {
+                        "to": user.email,
+                        "context": {
+                            "username": user.username,
+                            "verification_link": f"http://localhost:8000/api/auth/verify/{verifyToken.id}" #TODO: change to fe link for verifying user
+                        }
                     }
-                }, status=status.HTTP_201_CREATED)
+
+                    response = requests.post(notification_url, json=email_payload)
+                    if response.status_code != 200:
+                        raise Exception("Email service failed", response.text)
+                    
+                    return Response({
+                        'message': 'User registered successfully',
+                        'user': {
+                            'id': str(user.id),
+                            'username': user.username,
+                            'email': user.email
+                        }
+                    }, status=status.HTTP_201_CREATED)
+                
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyUser(APIView):
-    def post(self, request, username):
-        user = get_object_or_404(WaletUser, username=username)
+    def post(self, request, verify_id):
+        verify_token = get_object_or_404(VerifyToken, id=verify_id)
+        print(verify_token.user_id)
+        user = get_object_or_404(WaletUser, id=verify_token.user_id)
         if user.is_active:
             return Response({"detail": "user already activated"}, status=status.HTTP_400_BAD_REQUEST)
         
         with transaction.atomic():
             user.is_active = True
+            verify_token.delete()
             user.save()
             return Response({"detail": "succesfully activate user"}, status=status.HTTP_200_OK)
 

@@ -62,3 +62,7 @@ class WaletUser(AbstractBaseUser):
                 raise ValidationError('Password must contain at least one number.')
             if not re.search(r'[!@#$%^&*(),.?":{}|<>]', self.password):
                 raise ValidationError('Password must contain at least one special character.')
+
+class VerifyToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(editable=False)
