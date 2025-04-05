@@ -233,7 +233,7 @@ class InviteTeamMember(APIView):
             if serializer.is_valid():
                 invitation = serializer.save()
                 invite_token = str(invitation.id)
-                invite_url = f'http://localhost:8000/api/project/add-member/{invite_token}'  #TODO: change to FE deployment url that include login
+                invite_url = f"{os.getenv("FRONTEND_URL", "http://localhost:3000")}/invitations"
                 email_payload = {
                     "to": email,
                     "context": {
@@ -280,6 +280,8 @@ class AddTeamMember(APIView):
         
                 invitation.is_used = True
                 invitation.save(update_fields=["is_used"]) 
+
+                ProjectInvitation.objects.filter(user=invitation.user, project=invitation.project).exclude(pk=token).delete()
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -509,3 +511,22 @@ class GetProjectMemberDetails(APIView):
         serializer = ProjectMemberSerializer(project_members)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class GetProjectInvitations(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get(self, request):
+        user = get_object_or_404(WaletUser, pk=request.user.id)
+        invitations = ProjectInvitation.objects.filter(user=user).select_related('project', 'project__manager')
+        
+        data = {
+            "invitations": [],
+        }
+        
+        for invitation in invitations:
+            invitation_data = ProjectInvitationSerializer(invitation).data
+            invitation_data['project_name'] = invitation.project.name
+            invitation_data['project_manager_username'] = invitation.project.manager.username
+            
+            data["invitations"].append(invitation_data)
+        
+        return Response(data, status=status.HTTP_200_OK)

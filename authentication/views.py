@@ -29,7 +29,7 @@ class RegisterUser(APIView):
                         "to": user.email,
                         "context": {
                             "username": user.username,
-                            "verification_link": f"http://localhost:8000/api/auth/verify/{verifyToken.id}" #TODO: change to fe link for verifying user
+                            "verification_link": f"{os.getenv("FRONTEND_URL", "http://localhost:3000")}/verify/{verifyToken.id}"
                         }
                     }
 

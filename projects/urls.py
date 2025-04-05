@@ -24,4 +24,5 @@ urlpatterns = [
     path('analytics/<uuid:project_id>', GetProjectAnalytics.as_view(), name='project-analytics'),
     path('<uuid:project_id>/members/', GetProjectMembers.as_view(), name='project-members-list'),
     path('<uuid:project_id>/members/<uuid:member_id>', GetProjectMemberDetails.as_view(), name='project-member-details'),
+    path('invitations', GetProjectInvitations.as_view(), name='project-invitations'),
 ]
