@@ -372,60 +372,74 @@ class GetProjectAnalytics(APIView):
         
         today = timezone.now()
         
-        # Check if month is provided in query params
         month_param = request.query_params.get('month')
+        year_param = request.query_params.get('year', today.year)
         
         try:
+            date_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.get_current_timezone())
+            if year_param:
+                year = int(year_param)
+                if year > today.year:
+                    return Response(
+                        {"error": "Year cannot be in the future"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                date_start = timezone.datetime(year, today.month, 1, 0, 0, 0, 0, tzinfo=timezone.get_current_timezone())
+
             if month_param:
                 month = int(month_param)
                 
-                # Validate month is between 1 and 12
                 if month < 1 or month > 12:
                     return Response(
                         {"error": "Month must be between 1 and 12"}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                if month > today.month:
+                if month > today.month and date_start.year == today.year:
                     return Response(
-                        {"error": "Month cannot be in the future"}, 
+                        {"error": "Date cannot be in the future"}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                month_start = timezone.datetime(today.year, month, 1, 0, 0, 0, 0, tzinfo=timezone.get_current_timezone())
-            else:
-                month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                date_start = date_start.replace(month=month)
+
         except ValueError:
             return Response(
                 {"error": "Invalid month or year format"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if month_start.month == 12:
-            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        if date_start.month == 12:
+            next_month = date_start.replace(year=date_start.year + 1, month=1)
         else:
-            next_month = month_start.replace(month=month_start.month + 1)
+            next_month = date_start.replace(month=date_start.month + 1)
 
-        print("month_start", month_start)
+        total_earnings = ProjectBudgetRecord.objects.filter(
+            project=project_id,
+            is_income=True,
+            created_at__gte=date_start,
+            created_at__lt=next_month,
+            member__isnull=True,
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         total_spendings = Transaction.objects.filter(
             project=project_id,
-            created_at__gte=month_start,
+            created_at__gte=date_start,
             created_at__lt=next_month
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
         top_categories = Transaction.objects.filter(
             project=project_id,
-            created_at__gte=month_start,
+            created_at__gte=date_start,
             created_at__lt=next_month,
             transaction_category__isnull=False 
         ).values('transaction_category__name')\
          .annotate(total=Sum('amount'))\
-         .order_by('-total')[:3]
+         .order_by('-total')
         
         top_members = Transaction.objects.filter(
             project=project_id,
-            created_at__gte=month_start,
+            created_at__gte=date_start,
             created_at__lt=next_month,
             user__isnull=False
         ).values('user__username', 'user__id')\
@@ -433,11 +447,13 @@ class GetProjectAnalytics(APIView):
             transaction_count=Count('id'),
             total_amount=Sum('amount')
          )\
-         .order_by('-total_amount')[:3]
+         .order_by('-total_amount')
         
         data= {
-            "month": month_start.month,
+            "month": date_start.month,
+            "year": date_start.year,
             "total_spendings": total_spendings,
+            "total_earnings": total_earnings,
             "top_categories": [
                 {
                     "name": category['transaction_category__name'],  
