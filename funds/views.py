@@ -186,6 +186,19 @@ class GetUserBudgetRequestsByProjectId(APIView):
         
         serializer = BudgetRequestSerializer(budget_requests, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class GetBudgetRequestsByProjectId(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, project_id):
+        budget_requests = BudgetRequest.objects.filter(project=project_id)
+        
+        status_filter = request.query_params.get('status')
+        if status_filter in ['pending', 'approved', 'rejected']:
+            budget_requests = budget_requests.filter(status=status_filter)
+        
+        serializer = BudgetRequestSerializer(budget_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class GetBudgetRequestById(APIView):
     
