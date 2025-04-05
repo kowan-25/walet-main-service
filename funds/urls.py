@@ -1,6 +1,6 @@
 from django.urls import path
 
-from.views import ( GetUserBudgetRequests, GetProjectTransaction, GetMemberTransaction, GetBudgetRequestById, GetUserBudgetRequestsByProjectId, GetBudgetRequestsByProjectId, GetTransactionById, CreateTransaction, DeleteTransaction, SendFunds, ResolveBudgetRequest, TakeFunds, UpdateTransaction
+from.views import ( GetUserBudgetRequests, GetProjectTransaction, GetMemberTransaction, CreateBudgetRequest, GetBudgetRequestById, GetUserBudgetRequestsByProjectId, GetBudgetRequestsByProjectId, GetTransactionById, CreateTransaction, DeleteTransaction, SendFunds, ResolveBudgetRequest, TakeFunds, UpdateTransaction
                    )
 
 urlpatterns = [
@@ -13,6 +13,7 @@ urlpatterns = [
     path('send-funds/<uuid:project_id>', SendFunds.as_view(), name='send-funds'),
     path('take-funds/<uuid:project_id>', TakeFunds.as_view(), name='take-funds'),
     path('budget-requests', GetUserBudgetRequests.as_view(), name='budget-request-list'),
+    path('budget-requests/create', CreateBudgetRequest.as_view(), name='create-budget-request'),
     path('budget-requests/<uuid:project_id>', GetUserBudgetRequestsByProjectId.as_view(), name='budget-request-user-list-by-project'),
     path('budget-requests/project/<uuid:project_id>', GetBudgetRequestsByProjectId.as_view(), name="budget-request-list-by-project"),
     path('budget-requests/<uuid:pk>', GetBudgetRequestById.as_view(), name='budget-request-detail'),

@@ -247,24 +247,24 @@ class CreateBudgetRequest(APIView):
 
             serializer = BudgetRequestSerializer(data=data)
             if serializer.is_valid():
-                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
-                notification_data = {
-                    "to": project.manager.email,
-                    "context": {
-                        "recipient_name": project.manager.username,
-                        "sender_name": member.member.username,
-                        "action_link": "https://medium.com/@naufalichsan114/",
-                        "project_name": project.name,
-                        "fund_total": amount
-                    }
-                }
+                # notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
+                # notification_data = {
+                #     "to": project.manager.email,
+                #     "context": {
+                #         "recipient_name": project.manager.username,
+                #         "sender_name": member.member.username,
+                #         "action_link": "https://medium.com/@naufalichsan114/",
+                #         "project_name": project.name,
+                #         "fund_total": amount
+                #     }
+                # }
 
-                response = requests.post(notification_url, json=notification_data)
-                if response.status_code != 200:
-                    return Response(
-                        {"error": "Failed to send notification", "details": response.json()},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
+                # response = requests.post(notification_url, json=notification_data)
+                # if response.status_code != 200:
+                #     return Response(
+                #         {"error": "Failed to send notification", "details": response.json()},
+                #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                #     )
                 
                 serializer.save(requested_by=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
