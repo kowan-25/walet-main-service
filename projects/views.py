@@ -336,9 +336,12 @@ class UpdateProjectBudget(APIView):
         
         if budget_records.is_editable:
             with transaction.atomic():
+                print(budget_records.amount," ", amount, " ", budget_records.project.total_budget)
+                budget_records.project.total_budget =  budget_records.project.total_budget - budget_records.amount + int(amount)
                 budget_records.amount = amount
                 budget_records.notes = notes
                 budget_records.save()
+                budget_records.project.save()
                 return Response({"detail": f"succesfully updated budget record {budget_records.id}"}, status=status.HTTP_200_OK)
         
         return Response({"error": "this budget record is uneditable"}, status=status.HTTP_403_FORBIDDEN)
@@ -355,6 +358,8 @@ class DeleteProjectBudget(APIView):
         
         if budget_records.is_editable:
             with transaction.atomic():
+                budget_records.project.total_budget -= budget_records.amount
+                budget_records.project.save()
                 budget_records.delete()
                 return Response({"detail": f"succesfully deleted budget record {budget_records.id}"}, status=status.HTTP_200_OK)
         
