@@ -166,7 +166,7 @@ class DeleteProjectCategory(APIView):
             if project.manager.id != request.user.id:
                 raise PermissionDenied("You don't have permissions to delete category to this Project")
             
-            ProjectCategory.delete()
+            category.delete()
             return Response({"message": "category deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         
 class RemoveTeamMember(APIView):
@@ -490,5 +490,19 @@ class GetProjectMembers(APIView):
 
         project_members = ProjectMember.objects.select_related('member').filter(project=project_id)
         serializer = ProjectMemberSerializer(project_members, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GetProjectMemberDetails(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, project_id, member_id):
+
+        if member_id != request.user.id:
+            raise PermissionDenied("You don't have permissions to view this member")
+
+        project_members = get_object_or_404(ProjectMember, project=project_id, member=member_id)
+        serializer = ProjectMemberSerializer(project_members)
         
         return Response(serializer.data, status=status.HTTP_200_OK)

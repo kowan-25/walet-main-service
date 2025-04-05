@@ -13,7 +13,7 @@ urlpatterns = [
     path('category/<uuid:pk>', GetProjectCategoryById.as_view(), name='project-category-detail'),
     path('category/create', CreateProjectCategory.as_view(), name='create-project-category'),
     path('category/delete/<uuid:pk>', DeleteProjectCategory.as_view(), name='delete-project-category'),
-    path('<uuid:project_pk>/members/<uuid:member_pk>', RemoveTeamMember.as_view(), name='remove-team-member'),
+    path('<uuid:project_pk>/members/<uuid:member_pk>/remove', RemoveTeamMember.as_view(), name='remove-team-member'),
     path('invite-member', InviteTeamMember.as_view(), name='invite-team-member'),
     path('add-member/<uuid:token>', AddTeamMember.as_view(), name='add-team-member'),
     path('budget-records/<uuid:project_id>', GetProjectBudgets.as_view(), name='project-budgets'),
@@ -23,4 +23,5 @@ urlpatterns = [
     path('budget-record/delete/<uuid:pk>', DeleteProjectBudget.as_view(), name='delete-project-budget'),
     path('analytics/<uuid:project_id>', GetProjectAnalytics.as_view(), name='project-analytics'),
     path('<uuid:project_id>/members/', GetProjectMembers.as_view(), name='project-members-list'),
+    path('<uuid:project_id>/members/<uuid:member_id>', GetProjectMemberDetails.as_view(), name='project-member-details'),
 ]
