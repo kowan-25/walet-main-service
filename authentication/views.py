@@ -75,6 +75,5 @@ class LoginUser(APIView):
         serializer = CustomTokenObtainPairSerializer(data=data)
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        else:
 
-            return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
