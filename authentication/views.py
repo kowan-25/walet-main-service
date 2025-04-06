@@ -6,10 +6,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 
-
 from .models import VerifyToken, WaletUser
 from .serializers import RegisterUserSerializer, CustomTokenObtainPairSerializer
-
 
 
 class RegisterUser(APIView):
@@ -53,7 +51,6 @@ class RegisterUser(APIView):
 class VerifyUser(APIView):
     def post(self, request, verify_id):
         verify_token = get_object_or_404(VerifyToken, id=verify_id)
-        print(verify_token.user_id)
         user = get_object_or_404(WaletUser, id=verify_token.user_id)
         if user.is_active:
             return Response({"detail": "user already activated"}, status=status.HTTP_400_BAD_REQUEST)
