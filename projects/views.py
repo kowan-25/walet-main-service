@@ -233,7 +233,7 @@ class InviteTeamMember(APIView):
             if serializer.is_valid():
                 invitation = serializer.save()
                 invite_token = str(invitation.id)
-                invite_url = f"{os.getenv("FRONTEND_URL", "http://localhost:3000")}/invitations"
+                invite_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/invitations"
                 email_payload = {
                     "to": email,
                     "context": {
