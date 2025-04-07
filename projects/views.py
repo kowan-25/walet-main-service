@@ -83,7 +83,7 @@ class UpdateProject(APIView):
             
             data = {
                 "name": request.data.get("name"),
-                "description": request.data.get("description", "")
+                "description": request.data.get("description", project.description)
             }
 
             serializer = ProjectSerializer(project, data=data)
