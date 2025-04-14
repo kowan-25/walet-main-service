@@ -33,7 +33,7 @@ class RegisterUser(APIView):
                         }
                     }
 
-                    response = requests.post(notification_url, json=email_payload)
+                    response = requests.post(notification_url, json=email_payload, verify=False)
                     if response.status_code != 200:
                         raise Exception("Email service failed", response.text)
                     

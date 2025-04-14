@@ -250,7 +250,7 @@ class InviteTeamMember(APIView):
                 }
 
                 try:
-                    response = requests.post(f"{os.getenv('NOTIFICATION_URL', 'http://localhost:8001')}/email/invite", json=email_payload)
+                    response = requests.post(f"{os.getenv('NOTIFICATION_URL', 'http://localhost:8001')}/email/invite", json=email_payload, verify=False)
                     response.raise_for_status()
                 except requests.RequestException:
                     return Response({"error": "Failed to send email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

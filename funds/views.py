@@ -195,7 +195,7 @@ class GetBudgetRequestsByProjectId(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, project_id):
-        budget_requests = BudgetRequest.objects.filter(project=project_id)
+        budget_requests = BudgetRequest.objects.select_related('requested_by').filter(project=project_id)
         
         status_filter = request.query_params.get('status')
         if status_filter in ['pending', 'approved', 'rejected']:
@@ -263,7 +263,7 @@ class CreateBudgetRequest(APIView):
                     }
                 }
 
-                response = requests.post(notification_url, json=notification_data)
+                response = requests.post(notification_url, json=notification_data, verify=False)
                 if response.status_code != 200:
                     return Response(
                         {"error": "Failed to send notification", "details": response.json()},
@@ -334,7 +334,7 @@ class ResolveBudgetRequest(APIView):
                     }
                 }
 
-                response = requests.post(notification_url, json=email_payload)
+                response = requests.post(notification_url, json=email_payload, verify=False)
                 if response.status_code != 200:
                     return Response(
                         {"error": "Failed to send notification", "details": response.json()},
