@@ -532,6 +532,7 @@ class GetProjectInvitations(APIView):
             invitation_data = ProjectInvitationSerializer(invitation).data
             invitation_data['project_name'] = invitation.project.name
             invitation_data['project_manager_username'] = invitation.project.manager.username
+            invitation_data.pop('is_used')
             
             data["invitations"].append(invitation_data)
         
