@@ -205,7 +205,13 @@ class InviteTeamMember(APIView):
     def post(self, request):
         ''' Expecting { project_id, email } inside request_body'''
         email = request.data.get("email")
-        project_id = UUID(request.data.get("project_id"))
+        try:
+            project_id = UUID(request.data.get("project_id"))
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Invalid project_id format"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         if not email or not project_id:
             return Response({"error": "Email and project_id are required"}, status=status.HTTP_400_BAD_REQUEST)
