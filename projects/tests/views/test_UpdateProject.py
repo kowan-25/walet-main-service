@@ -6,7 +6,7 @@ from projects.models import Project
 
 User = get_user_model()
 
-class CreateProjectTest(APITestCase):
+class UpdateProjectTest(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass", email='test@example.com')
