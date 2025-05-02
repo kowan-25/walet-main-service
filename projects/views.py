@@ -239,7 +239,7 @@ class InviteTeamMember(APIView):
             if serializer.is_valid():
                 invitation = serializer.save()
                 invite_token = str(invitation.id)
-                invite_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/invitations"
+                invite_url = f"{os.getenv('PODS_FRONTEND_URL', 'http://localhost:3000')}/invitations"
                 email_payload = {
                     "to": email,
                     "context": {
@@ -250,7 +250,7 @@ class InviteTeamMember(APIView):
                 }
 
                 try:
-                    response = requests.post(f"{os.getenv('NOTIFICATION_URL', 'http://localhost:8001')}/email/invite", json=email_payload, verify=False)
+                    response = requests.post(f"{os.getenv('PODS_NOTIFICATION_URL', 'http://localhost:8001')}/email/invite", json=email_payload, verify=False)
                     response.raise_for_status()
                 except requests.RequestException:
                     return Response({"error": "Failed to send email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

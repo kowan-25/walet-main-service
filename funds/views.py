@@ -210,7 +210,7 @@ class GetBudgetRequestById(APIView):
 
     def get(self, request, pk):
         budget_request = get_object_or_404(BudgetRequest, id=pk)
-        
+
         if budget_request.requested_by != request.user:
             raise PermissionDenied("You don't have permissions to view this budget request")
 
@@ -251,13 +251,13 @@ class CreateBudgetRequest(APIView):
 
             serializer = BudgetRequestSerializer(data=data)
             if serializer.is_valid():
-                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
+                notification_url = os.getenv("PODS_NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
                 notification_data = {
                     "to": project.manager.email,
                     "context": {
                         "recipient_name": project.manager.username,
                         "sender_name": member.member.username,
-                        "action_link": f"http://localhost:3000/dashboard/{project_id}/fund-requests",
+                        "action_link": f"{os.getenv('PODS_FRONTEND_URL', 'http://localhost:3000')}/dashboard/{project_id}/fund-requests",
                         "project_name": project.name,
                         "fund_total": amount
                     }
@@ -324,7 +324,7 @@ class ResolveBudgetRequest(APIView):
                 budget_request.save()
 
                 # Email Notification
-                notification_url = os.getenv("NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-approval"
+                notification_url = os.getenv("PODS_NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-approval"
                 email_payload = {
                     "to": budget_request.requested_by.email,
                     "context": {
