@@ -20,4 +20,3 @@ variables:
   PODS_SETTINGS_MODULE: $django_settings_module
   PODS_NOTIFICATION_URL: $notification_url
   PODS_FRONTEND_URL: $frontend_url
-  PODS_ALLOWED_URL_HOSTS: $allowed_host

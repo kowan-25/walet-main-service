@@ -1,5 +1,6 @@
 from .settings import *
 
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "main-service", "https://kelompok-80-main-service.pkpl.cs.ui.ac.id", "http://main-service.kelompok-80-ns.svc.cluster.local"]
 DEBUG = False
 DATABASES = {
         "default": {
