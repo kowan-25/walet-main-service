@@ -1,0 +1,109 @@
+// Walet Main Service - Entity Relationship Diagram
+// Generated from Django models
+
+// ===========================================
+// AUTHENTICATION MODELS
+// ===========================================
+
+Table walet_user {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  username varchar(100) [unique, not null]
+  email varchar(255) [unique, not null]
+  password varchar(255) [not null]
+  created_at timestamp [default: `now()`]
+  deleted_at timestamp [null]
+  is_deleted boolean [default: false]
+  is_staff boolean [default: false]
+  is_superuser boolean [default: false]
+  is_active boolean [default: false]
+}
+
+Table verify_token {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  user_id uuid [not null]
+}
+
+// ===========================================
+// PROJECT MODELS
+// ===========================================
+
+Table project {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  manager_id uuid [not null, ref: > walet_user.id]
+  name varchar(255) [not null]
+  description text [null]
+  total_budget integer [default: 0, note: 'Must be >= 0']
+  status boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table project_category {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  project_id uuid [not null, ref: > project.id]
+  name varchar(255) [not null]
+
+  indexes {
+    (project_id, name) [unique, name: 'unique_project_category']
+  }
+}
+
+Table project_member {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  member_id uuid [not null, ref: > walet_user.id]
+  project_id uuid [not null, ref: > project.id]
+  budget integer [default: 0]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id, member_id) [unique, name: 'unique_member_project']
+  }
+}
+
+Table project_invitation {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  project_id uuid [not null, ref: > project.id]
+  user_id uuid [not null, ref: > walet_user.id]
+  created_at timestamp [default: `now()`]
+  expires_at timestamp [note: 'Default: now() + 3 days']
+  is_used boolean [default: false]
+}
+
+Table project_budget_record {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  project_id uuid [not null, ref: > project.id]
+  user_id uuid [null, ref: > walet_user.id, note: 'Required for expense records']
+  amount integer [not null, note: 'Must be >= 0']
+  notes text [null, note: 'Max 50 characters']
+  created_at timestamp [default: `now()`]
+  is_income boolean [not null]
+  is_editable boolean [default: false]
+}
+
+// ===========================================
+// FUNDS MODELS
+// ===========================================
+
+Table transaction {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  user_id uuid [not null, ref: > walet_user.id]
+  project_id uuid [not null, ref: > project.id]
+  amount integer [not null, note: 'Must be >= 0']
+  transaction_note text [null]
+  transaction_category uuid [not null, ref: > project_category.id]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table budget_request {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  project_id uuid [not null, ref: > project.id]
+  requested_by uuid [not null, ref: > walet_user.id]
+  created_at timestamp [default: `now()`]
+  request_reason text [not null]
+  status varchar(20) [default: 'pending', note: 'pending | approved | rejected']
+  amount decimal(15,2) [default: 0, note: 'Must be >= 0']
+  resolve_note text [null]
+  resolved_at timestamp [default: `now()`]
+  resolved_by uuid [null, ref: > walet_user.id]
+}
