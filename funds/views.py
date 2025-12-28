@@ -251,13 +251,13 @@ class CreateBudgetRequest(APIView):
 
             serializer = BudgetRequestSerializer(data=data)
             if serializer.is_valid():
-                notification_url = os.getenv("PODS_NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-request"
+                notification_url = os.getenv("EMAIL_URL", "http://localhost:8001") + "/fund-request"
                 notification_data = {
                     "to": project.manager.email,
                     "context": {
                         "recipient_name": project.manager.username,
                         "sender_name": member.member.username,
-                        "action_link": f"{os.getenv('PODS_FRONTEND_URL', 'http://localhost:3000')}/dashboard/{project_id}/fund-requests",
+                        "action_link": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard/{project_id}/fund-requests",
                         "project_name": project.name,
                         "fund_total": amount
                     }
@@ -324,7 +324,7 @@ class ResolveBudgetRequest(APIView):
                 budget_request.save()
 
                 # Email Notification
-                notification_url = os.getenv("PODS_NOTIFICATION_URL", "http://localhost:8001") + "/email/fund-approval"
+                notification_url = os.getenv("EMAIL_URL", "http://localhost:8001") + "/fund-approval"
                 email_payload = {
                     "to": budget_request.requested_by.email,
                     "context": {

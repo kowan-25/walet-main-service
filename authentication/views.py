@@ -23,13 +23,13 @@ class RegisterUser(APIView):
                     )
                     verifyToken.save()
 
-                    notification_url = os.getenv("PODS_NOTIFICATION_URL", "http://localhost:8001") + "/email/verify-user"
+                    notification_url = os.getenv("EMAIL_URL", "http://localhost:8001") + "/verification"
 
                     email_payload = {
                         "to": user.email,
                         "context": {
                             "username": user.username,
-                            "verification_link": f"{os.getenv('PODS_FRONTEND_URL', 'http://localhost:3000')}/verify/{verifyToken.id}",
+                            "verification_link": f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify/{verifyToken.id}",
                         }
                     }
 
