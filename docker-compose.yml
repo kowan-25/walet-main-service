@@ -31,6 +31,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL}
       - EMAIL_URL=${EMAIL_URL}
       - SECRET_KEY=${SECRET_KEY}
+      - SETTINGS_MODULE=${SETTINGS_MODULE}
     depends_on:
       db:
         condition: service_healthy
