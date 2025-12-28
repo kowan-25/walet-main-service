@@ -66,6 +66,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://kelompok-80-walet.pkpl.cs.ui.ac.id",
+    "http://walet.taskline.site"
 ]
 
 ROOT_URLCONF = 'walet.urls'
